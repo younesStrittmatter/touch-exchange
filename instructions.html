@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stroop Intro</title>
+    <link rel="stylesheet" href="../src/css/four_color_strop_intro.css">
+</head>
+<body>
+<div class="contentWrapper">
+    <h1>INTRODUCTION</h1>
+    <div>
+        Hello and welcome to our study. In this study you will have to react as fast and as accurate as possible. You
+        will see images like this:
+    </div>
+    <div class="example">
+        <div class="stimulus" style="color: yellow">green</div>
+    </div>
+    <div>
+        Note that the meaning of the word is "green", while the print color is "yellow".
+    </div>
+    <div id="start_block">
+    </div>
+    <div class="example">
+        <h2>In this case the correct answer is <span id="correct_1"></span></h2>
+        <div class="stimulus" style="color: red">blue</div>
+    </div>
+    <div id="end_block">
+    </div>
+    <div class="example">
+        <h2>In this case the correct answer is <span id="correct_2"></span></h2>
+        <div class="stimulus" style="color: green">blue</div>
+    </div>
+    <div id="reaction">
+        You will have to react by pressing buttons 'c', 'd', 'n', and 'j' on the keyboard. The key to color mapping will
+        be explained before
+        the experiment starts. Please put your left index finger on the 'c' key, your left middle finger on the 'd' key,
+        your right index finger
+        on the 'n' key and the right middle finger on the 'j' key during the experiment.
+    </div>
+    <div>
+        Please click >continue< to proceed.
+    </div>
+    <div class="buttonWrapper">
+        <button id="redirect_button">Continue</button>
+    </div>
+</div>
+</body>
+
+<script>
+    // Get all url parameters
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    // region set redirect of button
+    const prolific_pid = urlParams.get('PROLIFIC_PID');
+    const between_condition = urlParams.get('CONDITION');
+    let start_mapping = between_condition.substring(4, 6);
+    let response_version = between_condition.substring(6, between_condition.length)
+    console.log(response_version)
+    let start_block = document.getElementById('start_block')
+    let end_block = document.getElementById('end_block')
+    let correct_1 = document.getElementById('correct_1')
+    let correct_2 = document.getElementById('correct_2')
+
+    if (start_mapping === 'wc') {
+        start_block.innerHTML = 'In the <b>first</b> part of the experiment, your goal is to react to the <b>meaning</b> of the word and ignore the <b>color</b>.'
+        end_block.innerHTML = 'In the <b>second</b> part of the experiment, your goal is to react to the <b>color</b> of the word and ignoer the <b>meaning</b>.'
+        correct_1.innerText = 'blue'
+        correct_2.innerText = 'green'
+    } else {
+        start_block.innerHTML = 'In the <b>first</b> part of the experiment, your goal is to react to the <b>color</b> of the word and ignore the <b>meaning</b>.'
+        end_block.innerHTML = 'In the <b>second</b> part of the experiment, your goal is to react to the <b>meaning</b> of the word and ignore the <b>color</b>.'
+        correct_1.innerText = 'red'
+        correct_2.innerText = 'blue'
+    }
+    if (response_version === 'touch') {
+        let reaction = document.getElementById('reaction')
+        reaction.innerText = 'You will have to react by touching the buttons on the screen. The button to color mapping will be explained before the experiment starts.'
+    }
+
+
+    let redirect_button = document.getElementById('redirect_button');
+    redirect_button.onclick = () => {
+        window.location = '/four_color_stroop_block/experiment.html?PROLIFIC_PID=' + prolific_pid + '&CONDITION=' + between_condition
+        return 0
+    }
+</script>
+</html>

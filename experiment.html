@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://unpkg.com/jspsych@7.3.1"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.1.2"></script>
+    <script src="/src/extension-touchscreen-buttons/index.js"></script>
+    <link type="text/css" rel="stylesheet"
+          href="/src/extension-touchscreen-buttons/css/extension-touchscreen-buttons.css">
+    <link href="https://unpkg.com/jspsych@7.3.1/css/jspsych.css" rel="stylesheet" type="text/css"/>
+    <style>
+
+        body {
+            background: #000;
+            color: #fff;
+        }
+
+        div {
+            font-size: 34pt;
+            user-select: none;
+            -moz-user-select: none;
+            -khtml-user-select: none;
+            -webkit-user-select: none;
+            -o-user-select: none;
+        }
+
+        h1 {
+            font-size: 18pt;
+        }
+
+        h2 {
+            font-size: 17pt;
+        }
+
+        h3 {
+            font-size: 16pt;
+        }
+
+        h4 h5 h6 {
+            font-size: 15pt;
+        }
+
+        .sweetbean-square {
+            width: 10vw;
+            height: 10vw
+        }
+
+        .sweetbean-circle {
+            width: 10vw;
+            height: 10vw;
+            border-radius: 50%
+        }
+
+        .sweetbean-triangle {
+            width: 0;
+            height: 0;
+            border-left: 5vw solid transparent;
+            border-right: 5vw solid transparent
+        }
+
+        .feedback-screen-red {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background: red
+        }
+
+        .feedback-screen-green {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background: green
+        }</style>
+    <script type="module">
+        import {storeData, incrementSequenceNumber, getTrialSequences} from "/src/io/io.js"
+
+        //region initialization
+
+        const main = async () => {
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            const pId = urlParams.get('PROLIFIC_PID');
+            const studyId = 'four_color_stroop_block';
+            const betweenCondition = urlParams.get('CONDITION');
+            let keyMapping = betweenCondition.substring(0, 4)
+            let blockMapping = betweenCondition.substring(4, 6)
+            let response_version = betweenCondition.substring(6, betweenCondition.length)
+            const sequence_nr = await incrementSequenceNumber(studyId, 'word', 4);
+            await incrementSequenceNumber(studyId, 'color', 4)
+            let blocks_word = []
+            let blocks_color = []
+            for (let i = 0; i < 4; i++) {
+                blocks_word.push(JSON.parse(await getTrialSequences(studyId, 'word', sequence_nr + i)))
+                blocks_color.push(JSON.parse(await getTrialSequences(studyId, 'color', sequence_nr + i)))
+            }
+            if (!keyMapping) {
+                keyMapping = 'cdnj';
+            }
+
+            if (!blockMapping) {
+                blockMapping = 'wc'
+            }
+            let blocks
+            let first_task = 'color'
+            let second_task = 'word'
+            if (blockMapping === 'wc') {
+                first_task = 'word'
+                second_task = 'color'
+                blocks = blocks_word.concat(blocks_color)
+            } else {
+                blocks = blocks_color.concat(blocks_word)
+            }
+
+            // UNCOMMENT FOR MOBILE VERSION: (DELETE LOWER)
+            // const char_to_key = (char) => {
+            //     if (char === 'c') {return 'bottom left'}
+            //     if (char === 'd') {return 'top left'}
+            //     if (char === 'n') {return 'bottom right'}
+            //     if (char === 'j') {return 'top right'}
+            // }
+            const char_to_key = (char) => {
+                return '>> ' + char + ' <<'
+            }
+
+
+
+            let correct_red = keyMapping[0];
+            let correct_yellow = keyMapping[1];
+            let correct_blue = keyMapping[2];
+            let correct_green = keyMapping[3];
+
+            const char_to_color = (char) => {
+                if (char === correct_red) {
+                    return 'red'
+                }
+                if (char === correct_yellow) {
+                    return 'yellow'
+                }
+                if (char === correct_blue) {
+                    return 'blue'
+                }
+                if (char === correct_green) {
+                    return 'green'
+                }
+            }
+
+            const fix_time = 600 // 10
+            const stim_time_train = 2000 // 10
+            const stim_time_test = 1500 // 10
+            const cue_onset = 400 // 10
+            const feedback_time_false = 4500 // 10
+            const feedback_time_correct = 500 // 10
+
+
+            const jsPsych = initJsPsych({
+                extensions: [
+                    {
+                        type: jsPsychTouchScreenButtonsExtension,
+                        params: [
+                            {
+                                middle: {
+                                    key: 'SPACE',
+                                    style: {
+                                        color: 'grey',
+                                        position: 'relative',
+                                        bottom: '2vw',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        fontWeight: 'bold',
+                                        fontSize: '11pt'
+                                    },
+                                    innerText: 'continue'
+                                }
+                            }, // layout 0 (continue button)
+                            {
+                                left_bottom: {key: 'c'},
+                                left_top: {key: 'd'},
+                                right_bottom: {key: 'n'},
+                                right_top: {key: 'j'}
+                            }, // layout 1 (task)
+                            {
+                                left_bottom: {key: 'm', innerText: 'continue', style: {fontSize: '11pt'}}
+                            },
+                            {
+                                left_top: {key: 'm', innerText: 'continue', style: {fontSize: '11pt'}}
+                            },
+                            {
+                                right_bottom: {key: 'm', innerText: 'continue', style: {fontSize: '11pt'}}
+                            },
+                            {
+                                right_top: {key: 'm', innerText: 'continue', style: {fontSize: '11pt'}}
+                            },
+                            {
+                                middle: {key: 'm', innerText: 'continue', style: {fontSize: '11pt'}}
+                            }
+                        ]
+                    }],
+                on_finish: () => {
+
+                    window.location = 'https://app.prolific.co/submissions/complete?cc=C1F0O2C4'
+                }
+            });
+
+            let full_line = [];
+            const fullscreen_trial = {
+                type: jsPsychFullscreen,
+                fullscreen_mode: true
+            };
+            full_line = full_line.concat(fullscreen_trial)
+
+            let text_introduction = '<div style="font-size: 15pt">The key mapping will be explained now.<br>Please pay close attention<br><br>Press any key to continue<br></div>'
+            if (response_version === 'touch') {
+                text_introduction = '<div style="font-size: 15pt">The key mapping will be explained now.<br>Please pay close attention<br></div>'
+            }
+
+            const introduction = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: text_introduction,
+                extensions: [
+                    {
+                        type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                    }
+                ]
+            };
+            full_line = full_line.concat(introduction)
+
+            const introduction_fingers = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '<div style="font-size: 15pt">' +
+                    'Please put your left index finger on the >> c << key,<br>' +
+                    'your left middle finger on the >> d << key,<br>' +
+                    'your right index finger on the >> n << key, <br>' +
+                    'and your right middle finger on the >> j << key.<br>' +
+                    'Please pay close attention<br><br>Press any key to continue<br></div>',
+                extensions: [
+                    {
+                        type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                    }
+                ]
+            };
+            if (response_version !== 'touch') {
+                full_line = full_line.concat(introduction_fingers)
+            }
+
+            const introduction_1 = (task) => {
+                let _prompt = task === 'word' ? 'meaning' : 'color'
+                let color = 'red'
+                if (keyMapping[0] === 'c') {
+                    color = 'red'
+                }
+                if (keyMapping[1] === 'c') {
+                    color = 'yellow'
+                }
+                if (keyMapping[2] === 'c') {
+                    color = 'blue'
+                }
+                if (keyMapping[3] === 'c') {
+                    color = 'green'
+                }
+                let text_introduction_1 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>' + color + '</b><br>press >> c << with your left index finger<br><br>Press any key to continue<br></div>'
+                let layout = 6
+                if (response_version === 'touch') {
+                    text_introduction_1 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>' + color + '</b><br>press the bottom left button<br></div>'
+                    layout = 2
+                }
+                return {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: text_introduction_1,
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: layout}
+                        }
+                    ]
+                }
+            };
+            full_line = full_line.concat(introduction_1(first_task))
+
+            const introduction_2 = (task) => {
+                let _prompt = task === 'word' ? 'meaning' : 'color'
+                let color = 'red'
+                if (keyMapping[0] === 'd') {
+                    color = 'red'
+                }
+                if (keyMapping[1] === 'd') {
+                    color = 'yellow'
+                }
+                if (keyMapping[2] === 'd') {
+                    color = 'blue'
+                }
+                if (keyMapping[3] === 'd') {
+                    color = 'green'
+                }
+                let text_introduction_2 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>'+color+'</b><br>press >> d << with your left middle finger<br><br>Press any key to continue<br></div>'
+                let layout = 6
+                if (response_version === 'touch') {
+                    text_introduction_2 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>'+color+'</b><br>press the top left button<br></div>'
+                    layout = 3
+                }
+                return {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: text_introduction_2,
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: layout}
+                        }
+                    ]
+                };
+            }
+            full_line = full_line.concat(introduction_2(first_task))
+
+
+            const introduction_3 = (task) => {
+                let _prompt = task === 'word' ? 'meaning' : 'color'
+                let color = 'red'
+                if (keyMapping[0] === 'n') {
+                    color = 'red'
+                }
+                if (keyMapping[1] === 'n') {
+                    color = 'yellow'
+                }
+                if (keyMapping[2] === 'n') {
+                    color = 'blue'
+                }
+                if (keyMapping[3] === 'n') {
+                    color = 'green'
+                }
+                let text_introduction_3 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>'+color+'</b><br>press >> n << with your right index finger<br><br>Press any key to continue<br></div>'
+                let layout = 6
+                if (response_version === 'touch') {
+                    text_introduction_3 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>'+color+'</b><br>press the bottom right button<br></div>'
+                    layout = 4
+                }
+
+                return {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: text_introduction_3,
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: layout}
+                        }
+                    ]
+                }
+            };
+            full_line = full_line.concat(introduction_3(first_task))
+
+
+            const introduction_4 = (task) => {
+                let _prompt = task === 'word' ? 'meaning' : 'color'
+                let color = 'red'
+                if (keyMapping[0] === 'j') {
+                    color = 'red'
+                }
+                if (keyMapping[1] === 'j') {
+                    color = 'yellow'
+                }
+                if (keyMapping[2] === 'j') {
+                    color = 'blue'
+                }
+                if (keyMapping[3] === 'j') {
+                    color = 'green'
+                }
+                let text_introduction_4 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>'+color+'</b><br>press >> j << with your right middle finger<br><br>Press any key to continue<br></div>'
+                let layout = 6
+                if (response_version === 'touch') {
+                    text_introduction_4 = '<div style="font-size: 15pt">If the <b>' + _prompt + '</b> of the word is <b>'+color+'</b><br>press the top right button<br></div>'
+                    layout = 5
+                }
+                return {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: text_introduction_4,
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: layout}
+                        }
+                    ]
+                };
+            }
+            full_line = full_line.concat(introduction_4(first_task))
+
+            let text_introduction_5 = '<div style="font-size: 15pt">There will be 1 training block followed by 3 test blocks with this task<br>Each block contains 97 trials<br>If your accuracy is bellow 50% you will not be compensated.<br>Press any key to continue</div>'
+            if (response_version === 'touch') {
+                text_introduction_5 = '<div style="font-size: 15pt">There will be 1 training block followed by 3 test blocks with this task<br>Each block contains 97 trials<br>If your accuracy is bellow 50% you will not be compensated.<br></div>'
+            }
+
+            const introduction_5 = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: text_introduction_5,
+                extensions: [
+                    {
+                        type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                    }
+                ]
+            };
+
+
+            const train = (task, i) => {
+                return [
+                    {
+                        timeline: [
+                            {
+                                type: jsPsychHtmlKeyboardResponse,
+                                trial_duration: fix_time,
+                                stimulus: "<div>+</div>",
+                                response_ends_trial: false
+                            }, {
+                                type: jsPsychHtmlKeyboardResponse, trial_duration: stim_time_train, stimulus: () => {
+                                    let color = jsPsych.timelineVariable('color');
+                                    let text = jsPsych.timelineVariable('word');
+                                    return "<div style='color: " + color + "'>" + text + '</div>'
+                                },
+                                choices: ['c', 'd', 'n', 'j'],
+                                on_finish: (data) => {
+                                    let test_against
+                                    if (task === 'word') {
+                                        test_against = jsPsych.timelineVariable('word')
+                                    } else if (task === 'color') {
+                                        test_against = jsPsych.timelineVariable('color')
+                                    }
+
+                                    let correct = () => {
+                                        if (test_against === "red") {
+                                            return correct_red
+                                        }
+                                        if (test_against === "green") {
+                                            return correct_green
+                                        }
+                                        if (test_against === "yellow") {
+                                            return correct_yellow
+                                        }
+                                        if (test_against === "blue") {
+                                            return correct_blue
+                                        }
+                                    };
+                                    data["correct"] = correct() == data["response"]
+                                    data["task"] = task
+                                    data["color"] = jsPsych.timelineVariable("color")
+                                    data["word"] = jsPsych.timelineVariable("word")
+                                    data["phase"] = "train"
+                                    data["trial_part"] = "stimulus"
+                                },
+                                extensions: [
+                                    {
+                                        type: jsPsychTouchScreenButtonsExtension, params: {layout: 1}
+                                    }
+                                ]
+                            }, {
+                                type: jsPsychHtmlKeyboardResponse,
+                                trial_duration: cue_onset,
+                                stimulus: "",
+                                choices: []
+                            }, {
+                                type: jsPsychHtmlKeyboardResponse, trial_duration: () => {
+                                    let last_trial_correct = jsPsych.data.get().last(2).values()[0].correct;
+                                    if (!last_trial_correct) {
+                                        return feedback_time_false
+                                    } else {
+                                        return feedback_time_correct
+                                    }
+                                }, stimulus: () => {
+                                    let last_trial_correct = jsPsych.data.get().last(2).values()[0].correct;
+                                    if (last_trial_correct) {
+                                        return "<div class='feedback'>Correct!</div>";
+
+                                    } else {
+                                        let last_trial_response = jsPsych.data.get().last(2).values()[0].response;
+                                        if (last_trial_response) {
+                                            let _prompt = task === 'word' ? 'meaning' : 'color'
+                                            if (response_version !== 'touch') {
+                                                return "<div style='font-size: 12pt'>Wrong!<br>" +
+                                                    "React to the <b>" + _prompt + "</b> of the word<br>" +
+                                                    char_to_color('c') + " => press >> c << with the left index finger<br>" +
+                                                    char_to_color('d') + " => press >> d << with the left middle finger<br>" +
+                                                    char_to_color('n') + " => press >> n << with the right index finger<br>" +
+                                                    char_to_color('j') + " => press >> j << with the right middle finger<br>" +
+                                                    "</div>";
+                                            } else {
+                                                return "<div style='font-size: 12pt'>Wrong!<br>" +
+                                                    "React to the <b>" + _prompt + "</b> of the word<br>" +
+                                                    char_to_color('c') + " => press the bottom left button<br>" +
+                                                    char_to_color('d') + " => press the top left button<br>" +
+                                                    char_to_color('n') + " => press the bottom right button<br>" +
+                                                    char_to_color('j') + " => press the top right button<br>" +
+                                                    "</div>";
+                                            }
+                                        } else {
+                                            let _prompt = task === 'word' ? 'meaning' : 'color'
+                                            if (response_version !== 'touch') {
+                                                return "<div style='font-size: 12pt'>Wrong!<br>" +
+                                                    "React to the <b>" + _prompt + "</b> of the word<br>" +
+                                                    char_to_color('c') + " => press >> c << with the left index finger<br>" +
+                                                    char_to_color('d') + " => press >> d << with the left middle finger<br>" +
+                                                    char_to_color('n') + " => press >> n << with the right index finger<br>" +
+                                                    char_to_color('j') + " => press >> j << with the right middle finger<br>" +
+                                                    "</div>";
+                                            } else {
+                                                return "<div style='font-size: 12pt'>Wrong!<br>" +
+                                                    "React to the <b>" + _prompt + "</b> of the word<br>" +
+                                                    char_to_color('c') + " => press the bottom left button<br>" +
+                                                    char_to_color('d') + " => press the top left button<br>" +
+                                                    char_to_color('n') + " => press the bottom right button<br>" +
+                                                    char_to_color('j') + " => press the top right button<br>" +
+                                                    "</div>";
+                                            }
+                                        }
+                                    }
+                                }, response_ends_trial: false
+                            }], timeline_variables: blocks[i]['trial_sequences']
+                    }]
+            }
+
+            full_line = full_line.concat(train(first_task, 0))
+
+            const trials = (task, i) => {
+                return [
+                    {
+                        timeline: [{
+                            type: jsPsychHtmlKeyboardResponse,
+                            trial_duration: fix_time,
+                            stimulus: "<div>+</div>",
+                            response_ends_trial: false
+                        }, {
+                            type: jsPsychHtmlKeyboardResponse, trial_duration: stim_time_test, stimulus: () => {
+                                let color = jsPsych.timelineVariable('color');
+                                let text = jsPsych.timelineVariable('word');
+                                return "<div style='color: " + color + "'>" + text + '</div>'
+                            }, choices: ['c', 'd', 'n', 'j'], on_finish: (data) => {
+                                let test_against
+                                if (task === 'word') {
+                                    test_against = jsPsych.timelineVariable('word')
+                                } else if (task === 'color') {
+                                    test_against = jsPsych.timelineVariable('color')
+                                }
+
+                                let correct = () => {
+                                    if (test_against === "red") {
+                                        return correct_red
+                                    }
+                                    if (test_against === "green") {
+                                        return correct_green
+                                    }
+                                    if (test_against === "yellow") {
+                                        return correct_yellow
+                                    }
+                                    if (test_against === "blue") {
+                                        return correct_blue
+                                    }
+                                };
+                                data["correct"] = correct() == data["response"]
+                                data["task"] = task
+                                data["color"] = jsPsych.timelineVariable("color")
+                                data["word"] = jsPsych.timelineVariable("word")
+                                data["phase"] = "test"
+                                data["trial_part"] = "stimulus"
+                            }, extensions: [
+                                {
+                                    type: jsPsychTouchScreenButtonsExtension, params: {layout: 1}
+                                }]
+                        }, {type: jsPsychHtmlKeyboardResponse, trial_duration: cue_onset, stimulus: "", choices: []}],
+                        timeline_variables: blocks[i]['trial_sequences']
+                    }]
+            };
+
+
+            for (let i = 1; i < blocks.length / 2; i++) {
+                const block_start = {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: '<div style="font-size: 15pt">The block ' + i + ' will start soon<br>Press any key to continue</div>',
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                        }
+                    ]
+                };
+                full_line = full_line.concat(block_start);
+                // full_line = full_line.concat(introduction_fingers)
+                if (response_version !== 'touch') {
+                    full_line = full_line.concat(introduction_fingers)
+                }
+                full_line = full_line.concat(introduction_1(first_task))
+                full_line = full_line.concat(introduction_2(first_task))
+                full_line = full_line.concat(introduction_3(first_task));
+                full_line = full_line.concat(introduction_4(first_task));
+                const block_start_1 = {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: '<div style="font-size: 15pt">The block ' + i + ' will start now<br>There will be no feedback</div>',
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                        }
+                    ]
+                };
+                full_line = full_line.concat(block_start_1);
+                full_line = full_line.concat(trials(first_task, i))
+            }
+
+            // full_line = full_line.concat(introduction_fingers)
+            if (response_version !== 'touch') {
+                    full_line = full_line.concat(introduction_fingers)
+            }
+            full_line = full_line.concat(introduction_1(second_task))
+            full_line = full_line.concat(introduction_2(second_task))
+            full_line = full_line.concat(introduction_3(second_task))
+            full_line = full_line.concat(introduction_4(second_task))
+            full_line = full_line.concat(introduction_5)
+            full_line = full_line.concat(train(second_task, 4))
+
+            for (let i = 5; i < blocks.length; i++) {
+                let text_block_start = '<div style="font-size: 15pt">The block ' + i + ' will start soon<br>Press any key to continue</div>'
+                if (response_version === 'touch') {
+                    text_block_start = '<div style="font-size: 15pt">The block ' + i + ' will start<br></div>'
+                }
+                const block_start = {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: text_block_start,
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                        }
+                    ]
+                };
+                full_line = full_line.concat(block_start);
+                // full_line = full_line.concat(introduction_fingers)
+                if (response_version !== 'touch') {
+                    full_line = full_line.concat(introduction_fingers)
+                }
+                full_line = full_line.concat(introduction_1(second_task))
+                full_line = full_line.concat(introduction_2(second_task))
+                full_line = full_line.concat(introduction_3(second_task));
+                full_line = full_line.concat(introduction_4(second_task));
+                let text_block_start_1 = '<div style="font-size: 15pt">The block ' + i + ' will start now<br>There will be no feedback<br>Press any key to continue</div>'
+                if (response_version === 'touch') {
+                    text_block_start_1 = '<div style="font-size: 15pt">The block ' + i + ' will start now<br>There will be no feedback<br></div>'
+                }
+                const block_start_1 = {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: text_block_start_1,
+                    extensions: [
+                        {
+                            type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                        }
+                    ]
+                };
+                full_line = full_line.concat(block_start_1);
+                full_line = full_line.concat(trials(second_task, i))
+            }
+
+
+            const send_data = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '<div style="font-size: 15pt">Please wait till the data is send to the server. ' +
+                    'Don\'t close or refresh the browser! Thank you for your participation!</div>',
+                trail_duration: 20000,
+                extensions: [
+                    {
+                        type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                    }
+                ],
+                on_start: () => {
+                    jsPsych.data.addProperties({
+                        'between_condition': betweenCondition,
+                        'prolific_id': pId,
+                        'study_id': studyId,
+                        'response_version': response_version
+                    })
+                    // const data = jsPsych.data.get().filter({trial_part: "stimulus"}).json();
+                    const data = jsPsych.data.get().json();
+                    storeData(studyId, pId, data);
+                }
+            };
+            full_line = full_line.concat(send_data);
+            let text_end = '<div style="font-size: 15pt">You will be redirected to prolific now<br>Press any key to continue<br></div>'
+            if (response_version === 'touch') {
+                text_end = '<div style="font-size: 15pt">You will be redirected to prolific now<br>Press continue to be redirected<br></div>'
+            }
+            const end = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: text_end,
+                extensions: [
+                    {
+                        type: jsPsychTouchScreenButtonsExtension, params: {layout: 6}
+                    }
+                ],
+            };
+            full_line = full_line.concat(end);
+            // full_line = [send_data]
+
+
+            jsPsych.run(full_line)
+        };
+        main()
+    </script>
+</head>
+<body>
+</body>
+</html>
